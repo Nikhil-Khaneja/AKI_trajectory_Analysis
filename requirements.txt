@@ -16,6 +16,11 @@ pybloom-live>=4.0.0          # SilverBloomFilter at Silver layer (v1.2.0)
 pandas>=2.0.0
 python-dotenv>=1.0.0
 
+# ── Module 2 streaming (Kafka + Spark) ────────────────────────────────────────
+confluent-kafka>=2.3.0       # Producer (Module 2 v1.2.0)
+pyspark>=3.5.0               # Structured Streaming consumer
+numpy>=1.26.0                # Patient state numerics
+
 # ── Testing ───────────────────────────────────────────────────────────────────
 pytest>=7.4.0
 pytest-cov>=4.1.0
