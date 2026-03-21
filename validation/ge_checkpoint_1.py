@@ -52,7 +52,7 @@ def _add_creatinine_expectations(validator):
 
 def _add_urine_expectations(validator):
     """Expectations applied to urine output (outputevents) DataFrames."""
-    validator.expect_column_values_to_be_greater_than_or_equal_to(
+    validator.expect_column_values_to_be_between(
         column="valuenum",
         min_value=0,
     )
@@ -113,14 +113,11 @@ def run_checkpoint_1(
 
     # ── Build in-memory GX context (no persistent store needed) ───────────
     context = gx.get_context()
-    ds = context.sources.add_or_update_pandas(name="module1_runtime")
+    ds = context.data_sources.add_or_update_pandas(name="module1_runtime")
     asset = ds.add_dataframe_asset(name=f"raw_{source_type}")
-    batch_request = asset.build_batch_request(dataframe=df)
+    batch_request = asset.build_batch_request(options={"dataframe": df})
 
-    validator = context.get_validator(
-        batch_request=batch_request,
-        expectation_suite_name=f"aki_raw_{source_type}_suite_v1_2_0",
-    )
+    validator = context.get_validator(batch_request=batch_request)
 
     # ── Apply expectations ─────────────────────────────────────────────────
     _add_common_expectations(validator)
@@ -142,8 +139,16 @@ def run_checkpoint_1(
 
     failed = [
         {
-            "expectation": r["expectation_config"]["expectation_type"],
-            "column": r["expectation_config"]["kwargs"].get("column", "N/A"),
+            "expectation": (
+                getattr(r["expectation_config"], "expectation_type", None)
+                or getattr(r["expectation_config"], "type", None)
+                or r["expectation_config"].get("expectation_type")
+                or r["expectation_config"].get("type")
+            ),
+            "column": (
+                getattr(r["expectation_config"], "kwargs", {})
+                or r["expectation_config"].get("kwargs", {})
+            ).get("column", "N/A"),
             "result": r.get("result", {}),
         }
         for r in results["results"]
@@ -189,8 +194,15 @@ def _save_html_report(results: dict, path: Path, source_type: str):
 
     rows_html = ""
     for r in results["results"]:
-        exp_type = r["expectation_config"]["expectation_type"]
-        col = r["expectation_config"]["kwargs"].get("column", "—")
+        exp_cfg = r["expectation_config"]
+        exp_type = (
+            getattr(exp_cfg, "expectation_type", None)
+            or getattr(exp_cfg, "type", None)
+            or exp_cfg.get("expectation_type")
+            or exp_cfg.get("type")
+        )
+        exp_kwargs = getattr(exp_cfg, "kwargs", {}) or exp_cfg.get("kwargs", {})
+        col = exp_kwargs.get("column", "—")
         status = "✅" if r["success"] else "❌"
         rows_html += f"<tr><td>{status}</td><td>{exp_type}</td><td>{col}</td></tr>\n"
 

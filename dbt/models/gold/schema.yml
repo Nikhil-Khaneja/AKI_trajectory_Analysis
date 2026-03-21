@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: gold_features_hourly
+    description: "Hourly engineered features for AKI prediction (v1.2.0)."
+    columns:
+      - name: subject_id
+      - name: hour_bucket
+      - name: creatinine
+      - name: min_cr_48h
+      - name: creatinine_ratio
+      - name: cr_delta_1h
+      - name: cr_delta_12h
+      - name: cr_delta_48h
+      - name: urine_ml
+      - name: urine_output_velocity_6h
+      - name: urine_output_velocity_12h
+      - name: urine_output_velocity_24h
+
+  - name: gold_kdigo_hourly
+    description: "Hourly KDIGO stage labels derived from gold_features_hourly (v1.2.0)."
+    columns:
+      - name: subject_id
+      - name: hour_bucket
+      - name: kdigo_stage
