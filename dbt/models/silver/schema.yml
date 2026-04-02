@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  # ── Staging models ──────────────────────────────────────────────────────────
+  - name: stg_labevents_creatinine
+    description: >
+      Filtered creatinine labs from BRONZE.RAW_LABEVENTS.
+      v1.2.0: item IDs 50912, 51081, 52024, 52546.
+      Range enforced: 0.3–15.0 mg/dL (GX Gate #1).
+    columns:
+      - name: subject_id
+        description: MIMIC-IV patient identifier
+        tests: [not_null, dbt_utils.not_empty_string]
+      - name: charttime
+        description: Timestamp of lab measurement
+        tests: [not_null]
+      - name: creatinine_mg_dl
+        description: Creatinine value in mg/dL (0.3–15.0)
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.3
+              max_value: 15.0
+      - name: valueuom
+        description: Unit of measure (must be mg/dL)
+        tests:
+          - accepted_values:
+              values: ['mg/dL']
+
+  - name: stg_outputevents_urine
+    description: >
+      Filtered urine output events from BRONZE.RAW_OUTPUTEVENTS.
+      MIMIC-IV item IDs: 226559, 226560, 226561, 226567, 226627, 226631, 227489.
+    columns:
+      - name: subject_id
+        tests: [not_null]
+      - name: charttime
+        tests: [not_null]
+      - name: urine_output_ml
+        description: Urine output volume in mL (>= 0)
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: stg_icustays
+    description: ICU stay windows from BRONZE.RAW_ICUSTAYS with LOS in hours.
+    columns:
+      - name: subject_id
+        tests: [not_null]
+      - name: stay_id
+        tests: [not_null, unique]
+      - name: intime
+        tests: [not_null]
+      - name: los_hours
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  # ── Silver models ───────────────────────────────────────────────────────────
+  - name: silver_creatinine_events
+    description: >
+      Deduplicated creatinine events, one row per subject_id + hour_bucket.
+      Normalized to mg/dL. Bloom Filter dedup applied upstream (silver_bloom_filter.py).
+      v1.2.0: range 0.3–15.0 enforced at staging; incremental materialization.
+    columns:
+      - name: subject_id
+        tests: [not_null]
+      - name: hour_bucket
+        tests: [not_null]
+      - name: creatinine
+        description: Creatinine value in mg/dL post-dedup
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.3
+              max_value: 15.0
+      - name: _pipeline_version
+        tests:
+          - accepted_values:
+              values: ['1.2.0']
+
+  - name: silver_urine_output_events
+    description: >
+      Urine output aggregated per patient-hour in mL.
+      One row per subject_id + stay_id + hour_bucket.
+    columns:
+      - name: subject_id
+        tests: [not_null]
+      - name: stay_id
+        tests: [not_null]
+      - name: hour_bucket
+        tests: [not_null]
+      - name: urine_output_ml
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+
+  - name: silver_icu_cohort
+    description: >
+      ICU cohort table joining icustays + admissions + patients.
+      Provides demographic context (age, gender, race) and mortality flags.
+      Used as reference dimension for all KDIGO feature windows.
+    columns:
+      - name: stay_id
+        tests: [not_null, unique]
+      - name: subject_id
+        tests: [not_null]
+      - name: icu_intime
+        tests: [not_null]
+      - name: gender
+        tests:
+          - accepted_values:
+              values: ['M', 'F']
+      - name: age_group
+        tests:
+          - accepted_values:
+              values: ['<65', '>=65']
+      - name: mortality_30d
+        tests:
+          - accepted_values:
+              values: [0, 1]

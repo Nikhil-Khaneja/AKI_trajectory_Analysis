@@ -1,0 +1,28 @@
+aki_snowflake:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: "{{ env_var('SF_ACCOUNT') }}"
+      user: "{{ env_var('SF_USER') }}"
+      password: "{{ env_var('SF_PASSWORD') }}"
+      role: "{{ env_var('SF_ROLE', 'SYSADMIN') }}"
+      warehouse: "{{ env_var('SF_WAREHOUSE') }}"
+      database: AKI_DB
+      schema: BRONZE          # default; overridden per model in dbt_project.yml
+      threads: 4
+      client_session_keep_alive: false
+      query_tag: "AKI_MODULE1_v1.2.0_DBT"
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SF_ACCOUNT') }}"
+      user: "{{ env_var('SF_USER') }}"
+      password: "{{ env_var('SF_PASSWORD') }}"
+      role: "{{ env_var('SF_ROLE', 'SYSADMIN') }}"
+      warehouse: "{{ env_var('SF_WAREHOUSE') }}"
+      database: AKI_DB
+      schema: BRONZE
+      threads: 8
+      client_session_keep_alive: false
+      query_tag: "AKI_MODULE1_v1.2.0_DBT_PROD"
