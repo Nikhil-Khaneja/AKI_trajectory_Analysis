@@ -29,6 +29,16 @@ models:
       silver_icu_cohort:
         +materialized: table
 
+    gold:
+      +materialized: view
+      +schema: GOLD
+      +tags: ["module3", "gold", "mimic_iv"]
+
+    mart:
+      +materialized: table
+      +schema: MART
+      +tags: ["module3", "mart", "mimic_iv"]
+
 vars:
   # v1.2.0 GX creatinine bounds (also enforced in ge_checkpoint_1.py)
   creatinine_min_mg_dl: 0.3

@@ -1,0 +1,10 @@
+version: 2
+
+models:
+  - name: mart_training_dataset
+    description: "MIMIC-IV only training dataset for AKI prediction (v1.2.0)."
+    columns:
+      - name: subject_id
+      - name: hour_bucket
+      - name: kdigo_stage
+      - name: target_progress_to_stage3_48h
