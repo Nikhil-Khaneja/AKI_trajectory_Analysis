@@ -1,0 +1,37 @@
+name: aki_trajectory_analysis
+version: '1.2.0'
+config-version: 2
+
+profile: aki_snowflake
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  aki_trajectory_analysis:
+    staging:
+      +materialized: view
+      +schema: BRONZE       # staging views query BRONZE raw tables
+      +tags: ["module1", "staging", "mimic_iv"]
+
+    silver:
+      +materialized: incremental
+      +schema: SILVER
+      +tags: ["module1", "silver", "mimic_iv"]
+      # silver_icu_cohort is a full table (overridden in model config)
+      silver_icu_cohort:
+        +materialized: table
+
+vars:
+  # v1.2.0 GX creatinine bounds (also enforced in ge_checkpoint_1.py)
+  creatinine_min_mg_dl: 0.3
+  creatinine_max_mg_dl: 15.0
+  pipeline_version: '1.2.0'
+  dataset: 'mimic_iv'           # MIMIC-IV ONLY — no eICU

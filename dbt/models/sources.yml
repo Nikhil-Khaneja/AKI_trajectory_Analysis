@@ -1,0 +1,43 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: "Snowflake BRONZE schema — raw MIMIC-IV data loaded via COPY INTO."
+    database: AKI_DB
+    schema: BRONZE
+    tables:
+      - name: raw_labevents
+        description: "Raw lab events from MIMIC-IV labevents.csv."
+        columns:
+          - name: subject_id
+            tests: [not_null]
+          - name: charttime
+            tests: [not_null]
+          - name: itemid
+            tests: [not_null]
+      - name: raw_outputevents
+        description: "Raw urine output events from MIMIC-IV outputevents.csv."
+        columns:
+          - name: subject_id
+            tests: [not_null]
+          - name: charttime
+            tests: [not_null]
+      - name: raw_icustays
+        description: "ICU stay records from MIMIC-IV icustays.csv."
+        columns:
+          - name: stay_id
+            tests: [not_null, unique]
+          - name: subject_id
+            tests: [not_null]
+      - name: raw_admissions
+        description: "Hospital admission records from MIMIC-IV admissions.csv."
+        columns:
+          - name: hadm_id
+            tests: [not_null, unique]
+          - name: subject_id
+            tests: [not_null]
+      - name: raw_patients
+        description: "Patient demographics from MIMIC-IV patients.csv."
+        columns:
+          - name: subject_id
+            tests: [not_null, unique]
