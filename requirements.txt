@@ -1,0 +1,21 @@
+# ── Snowflake connector ────────────────────────────────────────────────────────
+snowflake-connector-python>=3.7.0
+pyarrow>=14.0.1              # required by snowflake-connector-python
+
+# ── dbt (Snowflake adapter) ───────────────────────────────────────────────────
+dbt-snowflake>=1.7.0
+dbt-core>=1.7.0
+
+# ── Great Expectations (v1.x fluent API) ─────────────────────────────────────
+great-expectations>=1.0.0
+
+# ── Bloom Filter ──────────────────────────────────────────────────────────────
+pybloom-live>=4.0.0          # SilverBloomFilter at Silver layer (v1.2.0)
+
+# ── Data handling ─────────────────────────────────────────────────────────────
+pandas>=2.0.0
+python-dotenv>=1.0.0
+
+# ── Testing ───────────────────────────────────────────────────────────────────
+pytest>=7.4.0
+pytest-cov>=4.1.0
