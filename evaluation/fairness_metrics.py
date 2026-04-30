@@ -1,6 +1,6 @@
 """
 Module 4: Fairness analysis by subgroup (age, gender).
-Owner: Nikhil
+Owner: Nikitha
 """
 import pandas as pd
 from joblib import load

@@ -1,6 +1,6 @@
 """
 Module 4: Logistic Regression training with MLflow tracking.
-Owner: Nikhil
+Owner: Nikitha
 """
 from pathlib import Path
 

@@ -1,6 +1,6 @@
 """
 Module 4: Model evaluation — compute all metrics.
-Owner: Nikhil
+Owner: Nikitha
 """
 from pathlib import Path
 
