@@ -4,3 +4,33 @@ __pycache__/
 *.pyc
 .pytest_cache/
 gx_reports/
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+
+# Virtualenvs
+.venv/
+.venv*/
+venv/
+env/
+
+# Local env files
+.env
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# Module 2 staging area (relocated into producer/, state/, algorithms/, ...)
+module_2_streaming/
+
+# Local checkpoints / temp
+tmp/
+spark-warehouse/
+metastore_db/

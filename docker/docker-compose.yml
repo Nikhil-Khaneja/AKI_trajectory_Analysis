@@ -1,0 +1,54 @@
+version: "3.8"
+
+# Module 2 v1.2.0 — Kafka + Zookeeper for the 3-topic streaming pipeline.
+# Topics created on startup:
+#   aki.labs.events    (creatinine, bmp, electrolytes, lab)
+#   aki.vitals.events  (heart_rate, blood_pressure, spo2, temperature, vital)
+#   aki.fluids.events  (urine, urine_output, fluid, iv_total)
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    container_name: aki-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: aki-kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+
+  kafka-setup:
+    image: confluentinc/cp-kafka:7.4.0
+    container_name: aki-kafka-setup
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/bash", "-c"]
+    command: |
+      "
+      echo 'Waiting for Kafka to be ready...' &&
+      cub kafka-ready -b kafka:29092 1 60 &&
+      echo 'Creating v1.2.0 3-topic layout...' &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic aki.labs.events   --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic aki.vitals.events --partitions 3 --replication-factor 1 &&
+      kafka-topics --bootstrap-server kafka:29092 --create --if-not-exists --topic aki.fluids.events --partitions 3 --replication-factor 1 &&
+      echo '── Topic list ──' &&
+      kafka-topics --bootstrap-server kafka:29092 --list
+      "
