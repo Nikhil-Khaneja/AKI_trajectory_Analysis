@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKI Prediction System v1.2.0 — Final Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 5px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.95;
+        }
+        
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 18px;
+            border: none;
+            background: transparent;
+            font-size: 1.05em;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+        }
+        
+        .tab-btn:hover {
+            background: #e9ecef;
+            color: #667eea;
+        }
+        
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+            padding: 40px;
+            animation: fadeIn 0.4s ease-in;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .grid {
+            display: grid;
+            gap: 30px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        }
+        
+        .grid-2 {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .grid-3 {
+            grid-template-columns: repeat(3, 1fr);
+        }
+        
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .card-content {
+            min-height: 250px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+            font-weight: 600;
+            margin: 4px 4px 4px 0;
+        }
+        
+        .badge-stage-0 { background: #d4edda; color: #155724; }
+        .badge-stage-1 { background: #fff3cd; color: #856404; }
+        .badge-stage-2 { background: #ffe5cc; color: #b8550d; }
+        .badge-stage-3 { background: #f8d7da; color: #721c24; }
+        
+        .metric-box {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin: 8px 0;
+        }
+        
+        .metric-value {
+            font-size: 2.5em;
+            font-weight: 700;
+            color: #667eea;
+            line-height: 1;
+        }
+        
+        .metric-label {
+            font-size: 0.95em;
+            color: #666;
+            margin-top: 8px;
+        }
+        
+        .patient-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 12px 0;
+        }
+        
+        .patient-card .label {
+            font-size: 0.85em;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        .patient-card .value {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        
+        .gauge-container {
+            position: relative;
+            width: 200px;
+            height: 200px;
+            margin: 20px auto;
+        }
+        
+        .twin-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .twin-card strong {
+            color: #667eea;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.95em;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .flag-warning {
+            color: #ff9800;
+            font-size: 1.2em;
+        }
+        
+        .flow-diagram {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 30px 0;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .flow-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-align: center;
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .flow-arrow {
+            font-size: 1.5em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .kafka-topics {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .kafka-topic {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .kafka-topic strong {
+            color: #667eea;
+        }
+        
+        .kafka-topic .partitions {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .mlflow-badge {
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin: 2px;
+            display: inline-block;
+        }
+        
+        .bloom-stat {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .bloom-stat:last-child {
+            border-bottom: none;
+        }
+        
+        .spark-note {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            font-size: 0.95em;
+        }
+        
+        .section-title {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+            margin: 25px 0 15px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🏥 AKI Prediction System v1.2.0</h1>
+            <p>Privacy-Protected Clinical Decision Support with Real-Time Analytics</p>
+        </div>
+        
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab(event, 'tab-1')">📊 Real-Time Results</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-2')">📈 Batch Analysis</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tab-3')">🏗️  Architecture</button>
+        </div>
+        
+        <!-- TAB 1: REAL-TIME RESULTS -->
+        <div id="tab-1" class="tab-content active">
+            <h2 class="section-title">📊 Real-Time Patient Monitoring</h2>
+            
+            <div class="grid">
+                <!-- PATIENT TRACE -->
+                <div class="card">
+                    <h3>👤 Patient Trace</h3>
+                    <div class="card-content">
+                        <div class="patient-card">
+                            <div class="label">Patient ID</div>
+                            <div class="value">PT_087543</div>
+                        </div>
+                        <div class="patient-card">
+                            <div class="label">Timestamp</div>
+                            <div class="value">2024-04-30 14:32:15</div>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <div class="label" style="color: #666;">KDIGO Stage</div>
+                            <div style="margin-top: 8px;">
+                                <span class="badge badge-stage-2">Stage 2 (High Risk)</span>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-radius: 6px; font-size: 0.9em; color: #856404;">
+                            ⚠️ Creatinine trend: ↑ 1.8 mg/dL (baseline 1.1)
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ANOMALY SCORE GAUGE -->
+                <div class="card">
+                    <h3>🎯 Anomaly Score</h3>
+                    <div class="card-content">
+                        <div class="metric-box">
+                            <div class="metric-value" style="color: #ff9800;">73%</div>
+                            <div class="metric-label">Risk Score (0-100)</div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <svg width="100%" height="150" viewBox="0 0 200 100">
+                                <!-- Gauge background -->
+                                <path d="M 30 100 A 70 70 0 0 1 170 100" stroke="#e9ecef" stroke-width="8" fill="none"/>
+                                <!-- Gauge fill (73%) -->
+                                <path d="M 30 100 A 70 70 0 0 1 144.6 46.4" stroke="#ff9800" stroke-width="8" fill="none"/>
+                                <!-- Needle -->
+                                <line x1="100" y1="100" x2="132.4" y2="58.2" stroke="#333" stroke-width="3"/>
+                                <!-- Center dot -->
+                                <circle cx="100" cy="100" r="4" fill="#333"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- BLOOM FILTER STATS -->
+                <div class="card">
+                    <h3>🔍 Bloom Filter Stats</h3>
+                    <div class="card-content">
+                        <div class="bloom-stat">
+                            <span>New Records Processed</span>
+                            <strong style="font-size: 1.3em; color: #667eea;">12,847</strong>
+                        </div>
+                        <div class="bloom-stat">
+                            <span>Duplicates Detected</span>
+                            <strong style="font-size: 1.3em; color: #ff9800;">284</strong>
+                        </div>
+                        <div class="bloom-stat">
+                            <span>Duplication Rate</span>
+                            <strong style="font-size: 1.3em; color: #4caf50;">2.2%</strong>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div style="background: #f0f0f0; height: 8px; border-radius: 4px; overflow: hidden;">
+                                <div style="background: linear-gradient(90deg, #4caf50, #8bc34a); width: 2.2%; height: 100%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- LSH CLINICAL TWINS -->
+            <div style="margin-top: 30px;">
+                <h2 class="section-title">🔗 Clinical Twins (LSH Top-3)</h2>
+                <div class="grid-3">
+                    <!-- Twin 1 -->
+                    <div class="card">
+                        <h3>Twin #1 (Rank 1)</h3>
+                        <div class="card-content">
+                            <div class="twin-card">
+                                <strong>Twin ID:</strong> PT_042891<br/>
+                                <strong>Similarity:</strong> 0.94<br/>
+                                <strong>Distance:</strong> 0.032
+                            </div>
+                            <div class="twin-card">
+                                <strong>Outcome:</strong> Recovered Stage 1<br/>
+                                <strong>Age Group:</strong> 60-69<br/>
+                                <strong>Care Unit:</strong> Medical
+                            </div>
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 0.85em;">
+                                <strong>XAI Top Features:</strong><br/>
+                                • Creatinine ratio: 42%<br/>
+                                • Urine output 24h: 28%<br/>
+                                • Hours since admit: 30%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Twin 2 -->
+                    <div class="card">
+                        <h3>Twin #2 (Rank 2)</h3>
+                        <div class="card-content">
+                            <div class="twin-card">
+                                <strong>Twin ID:</strong> PT_056217<br/>
+                                <strong>Similarity:</strong> 0.89<br/>
+                                <strong>Distance:</strong> 0.064
+                            </div>
+                            <div class="twin-card">
+                                <strong>Outcome:</strong> Progressed to Stage 3<br/>
+                                <strong>Age Group:</strong> 60-69<br/>
+                                <strong>Care Unit:</strong> Medical
+                            </div>
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 0.85em;">
+                                <strong>XAI Top Features:</strong><br/>
+                                • Creatinine delta 48h: 45%<br/>
+                                • Creatinine ratio: 32%<br/>
+                                • Baseline creatinine: 23%
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Twin 3 -->
+                    <div class="card">
+                        <h3>Twin #3 (Rank 3)</h3>
+                        <div class="card-content">
+                            <div class="twin-card">
+                                <strong>Twin ID:</strong> PT_031654<br/>
+                                <strong>Similarity:</strong> 0.87<br/>
+                                <strong>Distance:</strong> 0.078
+                            </div>
+                            <div class="twin-card">
+                                <strong>Outcome:</strong> Stable, Stage 2<br/>
+                                <strong>Age Group:</strong> 60-69<br/>
+                                <strong>Care Unit:</strong> Surgical
+                            </div>
+                            <div style="background: #e3f2fd; padding: 10px; border-radius: 4px; margin-top: 10px; font-size: 0.85em;">
+                                <strong>XAI Top Features:</strong><br/>
+                                • Urine output 6h: 38%<br/>
+                                • Creatinine ratio: 35%<br/>
+                                • Hours since admit: 27%
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 2: BATCH ANALYSIS -->
+        <div id="tab-2" class="tab-content">
+            <h2 class="section-title">📈 Batch Analysis & Quality Metrics</h2>
+            
+            <div class="grid-2">
+                <!-- Medallion Row Counts -->
+                <div class="card">
+                    <h3>📊 Medallion Architecture Counts</h3>
+                    <div class="card-content">
+                        <canvas id="medallion-chart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- GX Pass Rate -->
+                <div class="card">
+                    <h3>✅ Great Expectations Pass Rate</h3>
+                    <div class="card-content">
+                        <canvas id="gx-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid-2" style="margin-top: 30px;">
+                <!-- Model Comparison: AUROC + AUPRC -->
+                <div class="card">
+                    <h3>🤖 Model Performance Comparison</h3>
+                    <div class="card-content">
+                        <canvas id="model-chart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Fairness Metrics -->
+                <div class="card">
+                    <h3>⚖️  Fairness Analysis</h3>
+                    <div class="card-content">
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Subgroup</th>
+                                        <th>F1</th>
+                                        <th>Recall</th>
+                                        <th>Flag</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>Age &lt;40</td>
+                                        <td>0.82</td>
+                                        <td>0.85</td>
+                                        <td>✓</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Age 40-49</td>
+                                        <td>0.79</td>
+                                        <td>0.78</td>
+                                        <td><span class="flag-warning">⚠️</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Age 50-59</td>
+                                        <td>0.85</td>
+                                        <td>0.87</td>
+                                        <td>✓</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Age 60-69</td>
+                                        <td>0.84</td>
+                                        <td>0.86</td>
+                                        <td>✓</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Age 70-79</td>
+                                        <td>0.75</td>
+                                        <td>0.72</td>
+                                        <td><span class="flag-warning">⚠️</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td>Age 80+</td>
+                                        <td>0.78</td>
+                                        <td>0.80</td>
+                                        <td><span class="flag-warning">⚠️</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
+                            <strong>Note:</strong> Threshold F1 &geq; 0.80, Recall &geq; 0.80
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DP Metrics -->
+            <div style="margin-top: 30px;">
+                <h2 class="section-title">🔐 Differential Privacy Dashboard Metrics (ε=0.5)</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h3>Mean Creatinine per KDIGO Stage (DP-Protected)</h3>
+                        <div class="card-content">
+                            <div class="table-responsive">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>KDIGO Stage</th>
+                                            <th>DP Mean ± Noise</th>
+                                            <th>Sensitivity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><span class="badge badge-stage-0">Stage 0</span></td>
+                                            <td>0.94 ± 0.23</td>
+                                            <td>1.0</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-stage-1">Stage 1</span></td>
+                                            <td>1.34 ± 0.28</td>
+                                            <td>1.0</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-stage-2">Stage 2</span></td>
+                                            <td>1.89 ± 0.35</td>
+                                            <td>1.0</td>
+                                        </tr>
+                                        <tr>
+                                            <td><span class="badge badge-stage-3">Stage 3</span></td>
+                                            <td>2.67 ± 0.41</td>
+                                            <td>1.0</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="margin-top: 15px; padding: 12px; background: #e3f2fd; border-radius: 4px; font-size: 0.85em;">
+                                <strong>📌 Mechanism:</strong> Laplace(scale=sensitivity/ε) | <strong>ε=0.5</strong> | Aggregates only (raw training data unchanged)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- TAB 3: ARCHITECTURE -->
+        <div id="tab-3" class="tab-content">
+            <h2 class="section-title">🏗️  System Architecture</h2>
+            
+            <!-- Snowflake Schema Flow -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 1.15em; color: #667eea; margin-bottom: 15px;">❄️  Snowflake Medallion Architecture</h3>
+                <div class="flow-diagram" style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <div class="flow-box">Bronze<br/><small>RAW</small></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">Silver<br/><small>CLEANED</small></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">Gold<br/><small>AGGREGATED</small></div>
+                    <div class="flow-arrow">→</div>
+                    <div class="flow-box">MART<br/><small>DP-PROTECTED</small></div>
+                </div>
+                <div style="margin-top: 15px; padding: 12px; background: #e8f5e9; border-left: 4px solid #4caf50; border-radius: 4px; font-size: 0.9em;">
+                    <strong>🔑 Bronze→Silver:</strong> Data validation, schema enforcement, deduplication | 
+                    <strong>🔑 Silver→Gold:</strong> dbt transformations, aggregations | 
+                    <strong>🔑 Gold→MART:</strong> Privacy (K-Anon + DP), MLflow versioning
+                </div>
+            </div>
+            
+            <!-- Kafka Streaming Topology -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 1.15em; color: #667eea; margin-bottom: 15px;">📬 Kafka Streaming (v1.2.0: 3 Topics)</h3>
+                <div class="kafka-topics">
+                    <div class="kafka-topic">
+                        <strong>🧪 labs</strong><br/>
+                        Creatinine, potassium, BUN events
+                        <div class="partitions">Partitions: 3 | Consumer Group: aki-labs-group</div>
+                    </div>
+                    <div class="kafka-topic">
+                        <strong>❤️  vitals</strong><br/>
+                        Heart rate, blood pressure, temperature events
+                        <div class="partitions">Partitions: 3 | Consumer Group: aki-vitals-group</div>
+                    </div>
+                    <div class="kafka-topic">
+                        <strong>💧 fluids</strong><br/>
+                        Urine output, IV inputs, fluid balance
+                        <div class="partitions">Partitions: 3 | Consumer Group: aki-fluids-group</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- MLflow Registry -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="font-size: 1.15em; color: #667eea; margin-bottom: 15px;">🎯 MLflow Model Registry</h3>
+                <div class="card">
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Model Name</th>
+                                    <th>Version</th>
+                                    <th>Data Version Hash</th>
+                                    <th>dbt Logic Version</th>
+                                    <th>AUROC</th>
+                                    <th>Training Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>aki_gbm_prod</strong></td>
+                                    <td>v1.2.0</td>
+                                    <td><span class="mlflow-badge">a7f2d1e4</span></td>
+                                    <td><span class="mlflow-badge">5c3b9a2f</span></td>
+                                    <td><strong>0.892</strong></td>
+                                    <td>2024-04-15</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>aki_lr_baseline</strong></td>
+                                    <td>v1.2.0</td>
+                                    <td><span class="mlflow-badge">a7f2d1e4</span></td>
+                                    <td><span class="mlflow-badge">5c3b9a2f</span></td>
+                                    <td>0.823</td>
+                                    <td>2024-04-15</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>aki_gbm_dev</strong></td>
+                                    <td>v1.2.1-dev</td>
+                                    <td><span class="mlflow-badge">b8e3c2f5</span></td>
+                                    <td><span class="mlflow-badge">6d4ca3b0</span></td>
+                                    <td>0.898</td>
+                                    <td>2024-04-28</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.85em; color: #666;">
+                        <strong>📌 Versioning:</strong> data_version_hash = SHA-256(MIMIC-IV filtered + K-Anon applied) | dbt_logic_version = SHA-256(dbt/ manifest.json)
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Spark Topology -->
+            <div>
+                <h3 style="font-size: 1.15em; color: #667eea; margin-bottom: 15px;">⚡ Spark Streaming Topology</h3>
+                <div class="card">
+                    <div class="spark-note">
+                        <strong>📊 Micro-Batch Processing:</strong><br/>
+                        • <strong>Window:</strong> 48-hour sliding window (24h overlap)<br/>
+                        • <strong>Micro-Batch Size:</strong> 5 minutes<br/>
+                        • <strong>Flush Interval:</strong> Every 100,000 events or 30 minutes (whichever first)<br/>
+                        • <strong>State Backend:</strong> RocksDB with 500MB cache<br/>
+                        • <strong>Output Mode:</strong> Update + Append for aggregations
+                    </div>
+                    <div style="margin-top: 20px;">
+                        <strong>Pipeline Flow:</strong>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px;">
+                            <div style="text-align: center;">
+                                <div style="font-weight: 600; color: #667eea;">Kafka Topics</div>
+                                <div style="font-size: 0.9em; color: #666;">labs, vitals, fluids</div>
+                            </div>
+                            <div style="color: #667eea; font-weight: bold;">→</div>
+                            <div style="text-align: center;">
+                                <div style="font-weight: 600; color: #667eea;">Spark Streaming</div>
+                                <div style="font-size: 0.9em; color: #666;">Stateful transforms</div>
+                            </div>
+                            <div style="color: #667eea; font-weight: bold;">→</div>
+                            <div style="text-align: center;">
+                                <div style="font-weight: 600; color: #667eea;">Snowflake Bronze</div>
+                                <div style="font-size: 0.9em; color: #666;">Auto-staging</div>
+                            </div>
+                            <div style="color: #667eea; font-weight: bold;">→</div>
+                            <div style="text-align: center;">
+                                <div style="font-weight: 600; color: #667eea;">dbt Orchestration</div>
+                                <div style="font-size: 0.9em; color: #666;">Medallion layers</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function switchTab(evt, tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Remove active class from all buttons
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(button => button.classList.remove('active'));
+            
+            // Show the current tab
+            document.getElementById(tabName).classList.add('active');
+            evt.currentTarget.classList.add('active');
+        }
+        
+        // Initialize charts after page load
+        window.addEventListener('load', function() {
+            // Medallion Chart
+            const medallionCtx = document.getElementById('medallion-chart').getContext('2d');
+            new Chart(medallionCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Bronze', 'Silver', 'Gold', 'MART'],
+                    datasets: [{
+                        label: 'Row Count',
+                        data: [15234567, 14892345, 12456890, 2847293],
+                        backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: true } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+            
+            // GX Pass Rate Chart
+            const gxCtx = document.getElementById('gx-chart').getContext('2d');
+            new Chart(gxCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Passed', 'Failed', 'Warnings'],
+                    datasets: [{
+                        data: [92, 3, 5],
+                        backgroundColor: ['#4caf50', '#f44336', '#ff9800']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+            
+            // Model Comparison Chart
+            const modelCtx = document.getElementById('model-chart').getContext('2d');
+            new Chart(modelCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Logistic Regression', 'Gradient Boosting'],
+                    datasets: [
+                        {
+                            label: 'AUROC',
+                            data: [0.823, 0.892],
+                            backgroundColor: '#667eea'
+                        },
+                        {
+                            label: 'AUPRC',
+                            data: [0.756, 0.851],
+                            backgroundColor: '#764ba2'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: { beginAtZero: true, max: 1.0 }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
