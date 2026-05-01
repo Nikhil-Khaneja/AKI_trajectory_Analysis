@@ -317,6 +317,10 @@ pytest tests/test_privacy.py -v
 - ✓ **Documentation:** DATA_CARD, MODEL_CARD, RUNBOOK updated
 - ✓ **Versioning:** MLflow tracks data_version_hash + dbt_logic_version
 
+## Future Scope
+
+For load balancing as data volume increases, we will add a distributed queueing layer ahead of Kafka to buffer messages, and further explore distributed processing frameworks such as LinkedIn's Northguard.
+
 ## References
 
 | Document | Purpose |
