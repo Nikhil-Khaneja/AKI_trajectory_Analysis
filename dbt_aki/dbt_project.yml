@@ -1,0 +1,22 @@
+name: 'aki_dbt_project'
+version: '1.2.0'
+config-version: 2
+
+profile: 'snowflake_aki'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+
+models:
+  aki_dbt_project:
+    bronze:
+      +materialized: view
+    silver:
+      +materialized: table
+    gold:
+      +materialized: table
+    mart:
+      +materialized: table

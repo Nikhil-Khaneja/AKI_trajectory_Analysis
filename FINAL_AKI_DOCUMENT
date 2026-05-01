@@ -1,0 +1,307 @@
+# FINAL_AKI_DOCUMENT
+
+## Project Objective
+
+Build a complete AKI (Acute Kidney Injury) trajectory pipeline on MIMIC data that supports:
+- validated ingestion,
+- medallion data layers on Iceberg,
+- KDIGO labeling and feature engineering in batch,
+- model training with Spark ML,
+- and real-time simulation + scoring with Kafka and Spark Structured Streaming.
+
+This document is the execution blueprint I will follow once you approve.
+
+## Approved Data Scope
+
+Current source files in `DATA/`:
+- `Hospital Data/patients.csv`
+- `Hospital Data/admissions-2.csv`
+- `Hospital Data/labevents.csv`
+- `Hospital Data/d_labitems.csv`
+- `ICU DATA/icustays.csv`
+- `ICU DATA/outputevents.csv`
+- `ICU DATA/d_items.csv`
+
+Readiness status from validation already completed:
+- Required headers for KDIGO path are present.
+- Strong creatinine coverage is present.
+- Strong urine output coverage is present when using curated urine output itemids.
+- Silver layer can fail if joins/filters are too broad (must be ICU-window constrained + curated itemids).
+
+## Final Architecture
+
+`Raw CSV -> GE Quality Gate #1 -> Iceberg Bronze -> dbt+Spark Silver -> Spark Batch Gold (KDIGO + features) -> Spark ML training -> Kafka replay/synthetic events -> Spark Streaming KDIGO/risk -> Iceberg Mart + monitoring`
+
+Layer definitions:
+- Bronze: raw validated records (minimal transformation)
+- Silver: cleaned, standardized, ICU-joined clinical events
+- Gold: hourly feature store + KDIGO labels + training dataset
+- Mart: model outputs, live risk, QA tables, reporting tables
+
+## Implementation Plan (Execution Order)
+
+### Phase 1 - Project scaffolding and environment
+
+I will create:
+- folders for `ge/`, `dbt/`, `spark/batch/`, `spark/streaming/`, `scripts/`, `configs/`, `docs/`
+- shared config file for paths, itemid allowlists, and thresholds
+- reproducible local run entrypoints (`scripts/*.py`)
+
+Deliverables:
+- deterministic folder structure
+- one-command setup notes
+
+### Phase 2 - Data profiling and canonical mappings
+
+I will generate explicit mapping artifacts:
+- `configs/creatinine_itemids.yml`
+- `configs/urine_output_itemids.yml`
+- `configs/excluded_itemids.yml` (ratios/non-serum labs, non-urine outputs, etc.)
+
+Checks included:
+- column availability and datatype inferencing
+- itemid frequency and unit distribution
+- missingness in KDIGO-critical fields
+- overlap with ICU admissions/stays
+
+Deliverables:
+- profiling report markdown
+- curated allowlists used by GE/dbt/Spark consistently
+
+### Phase 3 - Great Expectations (Quality Gate #1)
+
+I will implement GE suites for all 7 tables with:
+- key non-null constraints
+- timestamp parse and range checks
+- numeric domain checks
+- referential checks against dictionary tables where practical
+- table-specific clinical sanity rules
+
+Examples of hard rules:
+- `labevents`: creatinine rows require valid numeric value and acceptable units
+- `outputevents`: urine output rows must be numeric and non-negative
+- `icustays`: `intime < outtime`
+
+Outputs:
+- pass/fail result objects
+- data docs summary
+- quarantine dataset for failed rows
+
+Deliverables:
+- `ge/expectations/*`
+- `ge/checkpoints/*`
+- `scripts/run_ge_validation.py`
+
+### Phase 4 - Iceberg Bronze ingestion
+
+I will ingest GE-passed rows to Iceberg Bronze tables:
+- `bronze_patients`
+- `bronze_admissions`
+- `bronze_icustays`
+- `bronze_labevents`
+- `bronze_d_labitems`
+- `bronze_outputevents`
+- `bronze_d_items`
+
+Each table will include metadata fields:
+- `ingest_ts`
+- `source_file`
+- `ge_batch_id`
+
+Deliverables:
+- `scripts/ingest_bronze.py`
+- Bronze schema DDL/spec
+
+### Phase 5 - Silver layer with dbt + Spark
+
+I will create dbt models:
+- staging models for typing and normalization
+- intermediate join models
+- final Silver canonical models
+
+Core Silver outputs:
+- `silver_icu_cohort`
+- `silver_creatinine_events` (curated itemids only, normalized units)
+- `silver_urine_output_events` (curated itemids only)
+- `silver_event_timeline` (optional unified stream feed)
+
+Critical protections:
+- ICU-time-window enforcement (`charttime` aligned with stay windows)
+- de-duplication strategy
+- outlier and impossible-value handling
+
+Deliverables:
+- dbt project with model DAG
+- `dbt run` + `dbt test` commands documented
+
+### Phase 6 - Gold batch pipeline (KDIGO + features)
+
+I will build Spark batch jobs to compute:
+- baseline creatinine logic
+- rolling creatinine deltas/ratios
+- urine output windows (6h, 12h, 24h)
+- KDIGO stage from creatinine + urine criteria
+- hourly patient feature table for ML
+
+Gold outputs:
+- `gold_kdigo_hourly`
+- `gold_features_hourly`
+- `gold_training_dataset`
+
+Deliverables:
+- `spark/batch/kdigo_batch.py`
+- `spark/batch/feature_builder.py`
+- validation checks on label distribution
+
+### Phase 7 - Batch model training (Spark ML)
+
+I will train and evaluate:
+- Logistic Regression baseline
+- Gradient Boosted Trees
+
+Prediction target:
+- progression from early AKI to severe AKI (as finalized window: 48h or 72h)
+
+Evaluation:
+- AUROC, AUPRC, precision/recall
+- calibration slice
+- subgroup slices where feasible
+
+Outputs:
+- model artifacts
+- metrics tables in Mart
+- training report
+
+Deliverables:
+- `spark/batch/train_model.py`
+- `mart_model_metrics`
+
+### Phase 8 - Streaming simulation producer (Kafka)
+
+I will create a generator/replay producer that:
+- reads Silver timeline events
+- emits ordered synthetic or replayed events into Kafka
+- supports configurable speedup and noise options
+
+Kafka topics:
+- `aki.creatinine.events`
+- `aki.urine.events`
+- optional unified topic: `aki.events`
+
+Deliverables:
+- `spark/streaming/kafka_producer.py`
+- topic contract schema docs
+
+### Phase 9 - Spark Structured Streaming (on-the-fly KDIGO + risk)
+
+I will implement stateful streaming job to:
+- consume Kafka events by event-time
+- deduplicate with Bloom Filter logic
+- maintain rolling state per patient/stay
+- compute on-the-fly KDIGO stage updates
+- apply trained model for real-time risk scoring
+- write live outputs to Iceberg Mart
+
+Streaming algorithms integration:
+- Bloom Filter: event deduplication
+- DGIM: memory-efficient sliding window counts
+- Flajolet-Martin: approximate distinct event tracking
+- Reservoir Sampling: balanced sample stream for diagnostics/online analysis
+
+Outputs:
+- `mart_live_risk_scores`
+- `mart_live_kdigo_state`
+- `mart_streaming_qc`
+
+Deliverables:
+- `spark/streaming/streaming_consumer.py`
+- end-to-end demo run command
+
+### Phase 10 - Great Expectations (Quality Gate #2 on outputs)
+
+I will add post-model/post-stream checks:
+- risk score range must be [0,1]
+- non-null key fields
+- valid timestamps and monotonicity constraints where applicable
+- stage value bounds
+
+Deliverables:
+- output GE suites
+- automated report generation
+
+### Phase 11 - Documentation, runbook, and handoff
+
+I will provide:
+- complete runbook from raw CSV to live demo
+- troubleshooting guide for common failures
+- assumptions and limitations (including weight-dependent urine normalization caveat if no weight table)
+- future extension plan (eICU external validation, MLflow tracking, dashboard integration)
+
+Deliverables:
+- `README.md` update
+- `docs/IMPLEMENTATION_RUNBOOK.md`
+- architecture and data contract notes
+
+## Data Risks and Mitigation (already identified)
+
+### Risk 1: Non-ICU or non-serum contamination in creatinine logic
+Mitigation:
+- strict creatinine itemid allowlist
+- unit constraints
+- ICU window alignment
+
+### Risk 2: Urine output misclassification
+Mitigation:
+- curated urine output itemids
+- optional exclusion of irrigant-sensitive records depending on KDIGO strictness mode
+
+### Risk 3: Silver joins reducing usable cohort unexpectedly
+Mitigation:
+- staged row-count checkpoints at each model
+- retain left-join diagnostics table
+- failure thresholds and alerts
+
+### Risk 4: Missing weight for strict mL/kg/hr urine normalization
+Mitigation:
+- define two execution modes:
+  - strict mode (if weight added later)
+  - pragmatic mode (volume-window based with clear documentation)
+
+## What I will NOT do without your approval
+
+- make claims of external validation without adding external dataset
+- add additional source tables outside your approved scope
+- change outcome window or KDIGO definitions silently
+
+## Milestones and acceptance criteria
+
+### Milestone A - Bronze+Silver ready
+Acceptance:
+- all tables validated by GE
+- Bronze ingested
+- Silver row-count quality checks pass
+
+### Milestone B - Gold KDIGO ready
+Acceptance:
+- KDIGO labels generated successfully
+- feature table complete and non-empty
+- sanity checks on stage distribution pass
+
+### Milestone C - Batch ML ready
+Acceptance:
+- two models trained
+- metrics generated and stored
+
+### Milestone D - Streaming demo ready
+Acceptance:
+- Kafka producer sends events
+- streaming job computes KDIGO/risk live
+- outputs persisted in Mart
+
+## Immediate next action after your approval
+
+1. Create project scaffolding + configs.
+2. Generate finalized creatinine/urine allowlist files from current data.
+3. Implement GE suites and first executable validation pipeline.
+
+If you approve this document, I will start building Phase 1 immediately.

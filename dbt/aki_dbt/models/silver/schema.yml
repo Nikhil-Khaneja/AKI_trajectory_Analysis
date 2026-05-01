@@ -1,0 +1,45 @@
+version: 2
+
+models:
+  - name: silver_icu_cohort
+    columns:
+      - name: stay_id
+        tests:
+          - not_null
+          - unique
+      - name: subject_id
+        tests:
+          - not_null
+      - name: hadm_id
+        tests:
+          - not_null
+      - name: intime
+        tests:
+          - not_null
+      - name: outtime
+        tests:
+          - not_null
+
+  - name: silver_creatinine_events
+    columns:
+      - name: stay_id
+        tests:
+          - not_null
+      - name: charttime
+        tests:
+          - not_null
+      - name: creatinine_mg_dl
+        tests:
+          - not_null
+
+  - name: silver_urine_output_events
+    columns:
+      - name: stay_id
+        tests:
+          - not_null
+      - name: charttime
+        tests:
+          - not_null
+      - name: urine_ml
+        tests:
+          - not_null

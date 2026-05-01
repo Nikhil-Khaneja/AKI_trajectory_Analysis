@@ -1,0 +1,34 @@
+name: aki_dbt
+version: "1.0.0"
+config-version: 2
+
+profile: aki_dbt
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+analysis-paths: ["analysis"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  aki_dbt:
+    staging:
+      +schema: SILVER
+      +materialized: view
+    intermediate:
+      +schema: SILVER
+      +materialized: table
+    silver:
+      +schema: SILVER
+      +materialized: table
+    gold:
+      +schema: GOLD
+      +materialized: table
+    mart:
+      +schema: MART
+      +materialized: table

@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: gold_kdigo_hourly
+    columns:
+      - name: stay_id
+        tests: [not_null]
+      - name: charttime
+        tests: [not_null]
+      - name: kdigo_stage
+        tests: [not_null]
+
+  - name: gold_features_hourly
+    columns:
+      - name: stay_id
+        tests: [not_null]
+      - name: charttime
+        tests: [not_null]
+      - name: rolling_max_kdigo
+        tests: [not_null]

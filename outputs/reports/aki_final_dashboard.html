@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AKI Prediction Command Center</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .mono { font-family: 'JetBrains Mono', monospace; }
+        .glass { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.1); }
+        .glow { box-shadow: 0 0 15px rgba(34, 211, 238, 0.3); }
+        .tab-active { border-bottom: 3px solid #22d3ee; color: #22d3ee; }
+        .hidden { display: none; }
+        @keyframes pulse-cyan { 0% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(34, 211, 238, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 211, 238, 0); } }
+        .pulse { animation: pulse-cyan 2s infinite; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200 min-h-screen">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 p-4 flex justify-between items-center glass sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="bg-cyan-500 p-2 rounded-lg">
+                <i class="fas fa-kidney text-white text-xl"></i>
+            </div>
+            <div>
+                <h1 class="text-xl font-bold tracking-tight">AKI PREDICTION <span class="text-cyan-400">COMMAND CENTER</span></h1>
+                <p class="text-xs text-slate-400 uppercase tracking-widest">Real-time Clinical Decision Support</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <div class="text-right">
+                <p class="text-sm font-semibold">Dr. Sarah Chen</p>
+                <p class="text-xs text-slate-500">Nephrology Lead</p>
+            </div>
+            <img src="https://ui-avatars.com/api/?name=Sarah+Chen&background=0D9488&color=fff" class="w-10 h-10 rounded-full border-2 border-cyan-500">
+        </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav class="flex bg-slate-900 border-b border-slate-800 px-8 gap-8">
+        <button onclick="showTab('real-time')" id="tab-real-time" class="py-4 text-sm font-semibold hover:text-cyan-400 transition tab-active uppercase tracking-wider">
+            <i class="fas fa-bolt mr-2"></i> Real-time Results
+        </button>
+        <button onclick="showTab('batch')" id="tab-batch" class="py-4 text-sm font-semibold hover:text-cyan-400 transition text-slate-400 uppercase tracking-wider">
+            <i class="fas fa-layer-group mr-2"></i> Batch Analysis
+        </button>
+        <button onclick="showTab('architecture')" id="tab-architecture" class="py-4 text-sm font-semibold hover:text-cyan-400 transition text-slate-400 uppercase tracking-wider">
+            <i class="fas fa-network-wired mr-2"></i> Architecture View
+        </button>
+    </nav>
+
+    <main class="p-8">
+        <!-- REAL-TIME TAB -->
+        <div id="content-real-time">
+            <div class="flex justify-between items-center mb-8">
+                <div>
+                    <h2 class="text-3xl font-bold">Live Stream Simulation</h2>
+                    <p class="text-slate-400">Replaying historical ICU events into Kafka topics...</p>
+                </div>
+                <button id="stream-btn" onclick="toggleStreaming()" class="bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold py-3 px-8 rounded-full flex items-center gap-2 glow pulse transition-all">
+                    <i class="fas fa-play"></i> <span id="btn-text">START LIVE STREAMING</span>
+                </button>
+            </div>
+
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-1">Streaming Window</h4>
+                    <div class="text-xl font-bold text-cyan-400">48h <span class="text-xs text-slate-500">Sliding</span></div>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-1">Bloom Filter: New Rows</h4>
+                    <div class="text-xl font-bold text-green-400" id="stat-new">0</div>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-1">Bloom Filter: Dropped</h4>
+                    <div class="text-xl font-bold text-red-400" id="stat-dropped">0</div>
+                </div>
+                <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                    <h4 class="text-[10px] font-bold text-slate-500 uppercase mb-1">Throughput</h4>
+                    <div class="text-xl font-bold text-purple-400" id="stat-throughput">0 <span class="text-xs text-slate-500">ev/s</span></div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-12 gap-6">
+                <!-- Multi-Patient Risk Monitor -->
+                <div class="col-span-12 bg-slate-900 p-6 rounded-xl border border-slate-800 mb-6">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase mb-4"><i class="fas fa-users mr-2 text-cyan-400"></i> Multi-Patient Live Risk Monitor</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-800 text-slate-400">
+                                <tr>
+                                    <th class="p-3">Patient ID</th>
+                                    <th class="p-3">Unit</th>
+                                    <th class="p-3">KDIGO Label</th>
+                                    <th class="p-3">Risk Score</th>
+                                    <th class="p-3">Bloom Filter</th>
+                                    <th class="p-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="multi-patient-body">
+                                <tr class="border-b border-slate-800">
+                                    <td class="p-3">PT-10234</td>
+                                    <td class="p-3">MICU</td>
+                                    <td class="p-3"><span class="px-2 py-0.5 bg-yellow-900 text-yellow-400 rounded text-xs">Stage 1</span></td>
+                                    <td class="p-3 font-bold text-yellow-500">64%</td>
+                                    <td class="p-3 text-xs text-green-500">Unique</td>
+                                    <td class="p-3"><span class="text-green-500">● Live</span></td>
+                                </tr>
+                                <tr class="border-b border-slate-800">
+                                    <td class="p-3">PT-10882</td>
+                                    <td class="p-3">SICU</td>
+                                    <td class="p-3"><span class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-xs">Stage 0</span></td>
+                                    <td class="p-3 font-bold text-green-500">22%</td>
+                                    <td class="p-3 text-xs text-green-500">Unique</td>
+                                    <td class="p-3"><span class="text-green-500">● Live</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="col-span-7 bg-slate-900 rounded-xl border border-slate-800 overflow-hidden h-[500px] flex flex-col">
+                    <div class="bg-slate-800 p-4 flex justify-between items-center">
+                        <h3 class="font-bold text-sm uppercase tracking-widest"><i class="fas fa-route mr-2 text-cyan-400"></i> End-to-End Event Trace (Kafka -> Model)</h3>
+                        <div id="streaming-status" class="text-[10px] text-slate-500"><i class="fas fa-circle mr-1"></i> Awaiting Stream</div>
+                    </div>
+                    <div id="log-container" class="p-4 overflow-y-auto flex-1 mono text-[10px] space-y-3">
+                        <p class="text-slate-500 italic">Kafka Cluster: Initialized | Topics: labs, vitals, fluid | Awaiting Replay...</p>
+                    </div>
+                </div>
+
+                <!-- Explainable AI (LSH) & KDIGO Logic -->
+                <div class="col-span-5 space-y-6">
+                    <div class="bg-slate-900 p-6 rounded-xl border border-cyan-500/30 glow">
+                        <h3 class="text-xs font-bold text-cyan-400 uppercase mb-4"><i class="fas fa-brain mr-2"></i> XAI: LSH Clinical Twins</h3>
+                        <p class="text-[10px] text-slate-500 mb-4">Explaining risk via historical cohort comparison (Approximate Nearest Neighbors)</p>
+                        <div id="lsh-twins" class="space-y-3">
+                            <div class="p-3 bg-slate-800 rounded border-l-4 border-cyan-500">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="font-bold">Twin Patient ID: 100018</span>
+                                    <span class="text-cyan-400">Dist: 0.79</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Outcome: Progressed to Stage 3 in 42h</p>
+                            </div>
+                            <div class="p-3 bg-slate-800 rounded border-l-4 border-cyan-500">
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="font-bold">Twin Patient ID: 100039</span>
+                                    <span class="text-cyan-400">Dist: 0.91</span>
+                                </div>
+                                <p class="text-[10px] text-slate-400">Outcome: Progressed to Stage 3 in 38h</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900 p-6 rounded-xl border border-slate-800">
+                        <h3 class="text-xs font-bold text-slate-500 uppercase mb-4">KDIGO Labeling Engine</h3>
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span>Creatinine Rise (x Baseline)</span>
+                                <span id="kdigo-cr" class="font-bold text-cyan-400">1.54x</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>Urine Output (6h Avg)</span>
+                                <span id="kdigo-uo" class="font-bold text-red-400">0.42 ml/kg/hr</span>
+                            </div>
+                            <div class="mt-4 p-2 bg-blue-900/20 text-blue-400 border border-blue-500/30 text-center rounded">
+                                RESULT: <span class="font-bold">KDIGO STAGE 2</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deep Dive Trace Inspector -->
+                <div class="col-span-12 bg-slate-900 p-8 rounded-xl border border-cyan-500/20 mb-8 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 p-4 opacity-10">
+                        <i class="fas fa-search-nodes text-8xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-6 text-cyan-400"><i class="fas fa-microscope mr-2"></i> Algorithm Deep Dive: Active Trace Inspector</h3>
+                    
+                    <div class="grid grid-cols-5 gap-4 relative">
+                        <!-- Step 1: Kafka -->
+                        <div class="space-y-3">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">1. Kafka Ingestion</div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-[10px]">
+                                <div class="text-cyan-400 font-bold mb-1">TOPIC: LABS</div>
+                                <div class="mono text-slate-400">
+                                    Raw: {pt:10234, val:1.8, ts:T+14h}<br>
+                                    Schema: MIMIC_V4_CORE
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-center text-slate-700"><i class="fas fa-chevron-right"></i></div>
+                        
+                        <!-- Step 2: Spark Window -->
+                        <div class="space-y-3">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">2. Spark Window (48h)</div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-[10px]">
+                                <div class="text-cyan-400 font-bold mb-1">WINDOW: [T-48h, T]</div>
+                                <div class="mono text-slate-400">
+                                    Records: 12 events found<br>
+                                    Min(Cr): 1.1 mg/dL<br>
+                                    Avg(UO): 0.52 ml/kg/hr
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-center text-slate-700"><i class="fas fa-chevron-right"></i></div>
+
+                        <!-- Step 3: Privacy & Anonymity -->
+                        <div class="space-y-3">
+                            <div class="text-[10px] font-bold text-slate-500 uppercase">3. Privacy Layer</div>
+                            <div class="bg-slate-800 p-3 rounded border border-slate-700 text-[10px]">
+                                <div class="text-green-400 font-bold mb-1">K-ANONYMITY (k=5)</div>
+                                <div class="mono text-slate-400">
+                                    Age: 62 -> '60-70'<br>
+                                    Unit: MICU -> 'ICU_TYPE_A'<br>
+                                    DP: ε=0.5 applied
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-8 mt-12 pt-8 border-t border-slate-800">
+                        <!-- Model Vector -->
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase">Model Input Vector (Feature Store)</h4>
+                            <div class="bg-slate-950 p-4 rounded border border-slate-700 mono text-xs text-cyan-500/80">
+                                [1.8, 1.1, 1.63, 0.42, 0.52, 0.48, 12, 1, 0]
+                                <div class="text-[9px] text-slate-600 mt-2">
+                                    [cr, base_cr, ratio, delta_1h, uo_6h, uo_24h, age_bin, gender, unit]
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Federated Update -->
+                        <div class="space-y-3">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase">Federated Learning: Local Gradient</h4>
+                            <div class="bg-slate-950 p-4 rounded border border-purple-500/30 mono text-xs text-purple-400/80">
+                                Δw: {0.0012, -0.0045, 0.0122, ...}<br>
+                                <span class="text-[9px] text-slate-600">Action: Local weights encrypted & sent to Aggregator</span>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <i class="fas fa-lock text-[10px]"></i>
+                                    <span class="text-[10px] text-slate-500">Secure Multi-Party Computation Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-12 mt-8">
+                    <h3 class="text-xl font-bold mb-6">Algorithm Visualization: Continuous Feature Transformation</h3>
+                    <div class="grid grid-cols-4 gap-6">
+                        <div class="bg-slate-900 p-6 rounded-xl border border-slate-800 text-center">
+                            <div class="w-12 h-12 bg-blue-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-flask text-blue-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm">RAW LABS</h4>
+                            <p class="text-xs text-slate-500 mt-2">Serum Creatinine (mg/dL) captured from Kafka</p>
+                        </div>
+                        <div class="flex items-center justify-center text-slate-700">
+                            <i class="fas fa-arrow-right text-2xl"></i>
+                        </div>
+                        <div class="bg-slate-900 p-6 rounded-xl border border-cyan-500/50 text-center relative overflow-hidden">
+                            <div class="absolute inset-0 bg-cyan-500/5 animate-pulse"></div>
+                            <div class="w-12 h-12 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-calculator text-cyan-400"></i>
+                            </div>
+                            <h4 class="font-bold text-sm">SPARK TRANSFORMATION</h4>
+                            <p class="text-xs text-slate-500 mt-2">Calculating rolling deltas & baseline ratios</p>
+                        </div>
+                        <div class="flex items-center justify-center text-slate-700">
+                            <i class="fas fa-arrow-right text-2xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- BATCH TAB -->
+        <div id="content-batch" class="hidden">
+            <h2 class="text-3xl font-bold mb-8">Batch Pipeline Analysis</h2>
+            <div class="grid grid-cols-12 gap-8">
+                <!-- Medallion Pipeline -->
+                <div class="col-span-12 bg-slate-900 p-8 rounded-2xl border border-slate-800">
+                    <div class="flex justify-between items-center mb-12">
+                        <div class="text-center flex-1">
+                            <div class="w-16 h-16 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-orange-500">
+                                <i class="fas fa-database text-orange-500"></i>
+                            </div>
+                            <h4 class="font-bold">BRONZE</h4>
+                            <p class="text-xs text-slate-500">Raw MIMIC/eICU Events</p>
+                        </div>
+                        <div class="h-0.5 bg-slate-800 flex-1 mx-4"></div>
+                        <div class="text-center flex-1">
+                            <div class="w-16 h-16 bg-gray-400/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-gray-400">
+                                <i class="fas fa-broom text-gray-400"></i>
+                            </div>
+                            <h4 class="font-bold">SILVER</h4>
+                            <p class="text-xs text-slate-500">Cleaned & Normalized</p>
+                        </div>
+                        <div class="h-0.5 bg-slate-800 flex-1 mx-4"></div>
+                        <div class="text-center flex-1">
+                            <div class="w-16 h-16 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-yellow-500">
+                                <i class="fas fa-award text-yellow-500"></i>
+                            </div>
+                            <h4 class="font-bold">GOLD</h4>
+                            <p class="text-xs text-slate-500">Engineered Features</p>
+                        </div>
+                        <div class="h-0.5 bg-slate-800 flex-1 mx-4"></div>
+                        <div class="text-center flex-1">
+                            <div class="w-16 h-16 bg-cyan-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-cyan-500">
+                                <i class="fas fa-shopping-cart text-cyan-500"></i>
+                            </div>
+                            <h4 class="font-bold">MART</h4>
+                            <p class="text-xs text-slate-500">Privacy & Predictions</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Performance Metrics -->
+                <div class="col-span-6 bg-slate-900 p-6 rounded-xl border border-slate-800">
+                    <h3 class="font-bold mb-4 uppercase text-xs text-slate-500 tracking-widest">Model Performance (GBT)</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-slate-800 p-4 rounded-lg text-center">
+                            <p class="text-xs text-slate-500">AUROC</p>
+                            <p class="text-2xl font-bold text-cyan-400">0.9918</p>
+                        </div>
+                        <div class="bg-slate-800 p-4 rounded-lg text-center">
+                            <p class="text-xs text-slate-500">F1 SCORE</p>
+                            <p class="text-2xl font-bold text-green-400">0.9652</p>
+                        </div>
+                    </div>
+                    <div class="mt-6 flex justify-center">
+                        <img src="../reports/model_analysis/confusion_matrix_gradient_boosting.png" class="max-h-[300px] rounded border border-slate-700" alt="Confusion Matrix">
+                    </div>
+                </div>
+
+                <div class="col-span-6 bg-slate-900 p-6 rounded-xl border border-slate-800">
+                    <h3 class="font-bold mb-4 uppercase text-xs text-slate-500 tracking-widest">Generalization Audit</h3>
+                    <div class="bg-slate-800 p-4 rounded-lg mb-4">
+                        <div class="flex justify-between text-xs mb-2">
+                            <span>MICU (Source)</span>
+                            <span class="text-cyan-400">AUROC 0.988</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-1.5 rounded-full">
+                            <div class="bg-cyan-500 h-full w-[98%]"></div>
+                        </div>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg mb-4">
+                        <div class="flex justify-between text-xs mb-2">
+                            <span>SICU (Target)</span>
+                            <span class="text-cyan-400">AUROC 0.991</span>
+                        </div>
+                        <div class="w-full bg-slate-700 h-1.5 rounded-full">
+                            <div class="bg-cyan-500 h-full w-[99%]"></div>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400 italic mt-4">Note: Low calibration decay (0.015) indicates high transfer reliability between ICU units.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ARCHITECTURE TAB -->
+        <div id="content-architecture" class="hidden">
+            <h2 class="text-3xl font-bold mb-8">System Architecture</h2>
+            <div class="bg-slate-900 p-8 rounded-2xl border border-slate-800 relative">
+                <div class="absolute top-4 right-4 bg-slate-800 px-3 py-1 rounded text-xs text-slate-400">v1.2.0 Stable</div>
+                
+                <div class="bg-gray-800 p-4 text-center text-xs text-gray-400 mb-8 rounded-lg border border-gray-700">
+                    Powered by <span class="font-bold text-blue-400"><i class="fas fa-snowflake mr-1"></i> Snowflake</span> | Unified Clinical Feature Store: GOLD.AKI_TRAINING_SET
+                </div>
+                
+                <div class="space-y-12 max-w-4xl mx-auto">
+                    <!-- Snowflake Banner -->
+                    <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-xl flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <i class="fas fa-snowflake text-blue-400 text-2xl"></i>
+                            <div>
+                                <h4 class="font-bold text-sm">SNOWFLAKE DATA CLOUD</h4>
+                                <p class="text-[10px] text-slate-500">Central Source of Truth for Medallion Architecture</p>
+                            </div>
+                        </div>
+                        <div class="text-xs font-bold text-blue-400 px-3 py-1 bg-blue-900/30 rounded border border-blue-500/30">
+                            CONNECTED: AKI_DB.GOLD
+                        </div>
+                    </div>
+
+                    <!-- Layer 1 -->
+                    <div class="flex items-center gap-12">
+                        <div class="w-1/3 bg-slate-800 p-6 rounded-xl border border-slate-700">
+                            <h4 class="font-bold text-cyan-400 mb-2">INGESTION</h4>
+                            <p class="text-xs text-slate-400">MIMIC-IV / eICU <br>PhysioNet Connectors</p>
+                        </div>
+                        <div class="flex-1 border-t-2 border-dashed border-slate-700 relative">
+                            <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 px-2 text-[10px] text-slate-500 font-bold uppercase tracking-tighter">Great Expectations</div>
+                        </div>
+                        <div class="w-1/3 bg-slate-800 p-6 rounded-xl border border-slate-700">
+                            <h4 class="font-bold text-cyan-400 mb-2">STORAGE</h4>
+                            <p class="text-xs text-slate-400">Apache Iceberg <br>Feature Store</p>
+                        </div>
+                    </div>
+
+                    <!-- Layer 2 -->
+                    <div class="flex items-center gap-12">
+                        <div class="w-1/3 bg-slate-800 p-6 rounded-xl border border-slate-700">
+                            <h4 class="font-bold text-cyan-400 mb-2">COMPUTE</h4>
+                            <p class="text-xs text-slate-400">dbt + Spark SQL <br>Feature Lineage</p>
+                        </div>
+                        <div class="flex-1 border-t-2 border-dashed border-slate-700"></div>
+                        <div class="w-1/3 bg-slate-800 p-6 rounded-xl border border-slate-700">
+                            <h4 class="font-bold text-cyan-400 mb-2">ML OPS</h4>
+                            <p class="text-xs text-slate-400">MLflow Tracking <br>Model Registry</p>
+                        </div>
+                    </div>
+
+                    <!-- Layer 3 -->
+                    <div class="bg-cyan-500/10 p-8 rounded-2xl border border-cyan-500/30">
+                        <h3 class="font-bold text-cyan-400 uppercase text-center mb-6">Cross-Cutting Layers</h3>
+                        <div class="grid grid-cols-3 gap-6 text-center">
+                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                                <h5 class="font-bold text-xs">PRIVACY</h5>
+                                <p class="text-[10px] text-slate-500 mt-2">K-Anonymity + L-Diversity</p>
+                            </div>
+                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                                <h5 class="font-bold text-xs">TRUST</h5>
+                                <p class="text-[10px] text-slate-500 mt-2">Fairness Audit + SHAP</p>
+                            </div>
+                            <div class="bg-slate-900 p-4 rounded-xl border border-slate-800">
+                                <h5 class="font-bold text-xs">STREAMING</h5>
+                                <p class="text-[10px] text-slate-500 mt-2">Kafka + Structured Streaming</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let isStreaming = false;
+        let streamInterval;
+        let eventCount = 0;
+
+        function showTab(tabId) {
+            ['real-time', 'batch', 'architecture'].forEach(id => {
+                document.getElementById('content-' + id).classList.add('hidden');
+                document.getElementById('tab-' + id).classList.remove('tab-active');
+                document.getElementById('tab-' + id).classList.add('text-slate-400');
+            });
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            document.getElementById('tab-' + tabId).classList.add('tab-active');
+            document.getElementById('tab-' + tabId).classList.remove('text-slate-400');
+        }
+
+        const events = [
+            "BLOOM: Event {pt:10234, type:lab, val:1.4} - UNIQUE -> Processing",
+            "SPARK: Updating rolling 48h Creatinine Delta for Patient 10234",
+            "KDIGO: Evaluated Patient 10234 -> Stage 1 (Cr 1.5x baseline)",
+            "BLOOM: Event {pt:10882, type:fluid} - DUPLICATE -> Dropped",
+            "XAI: Retrieving clinical twins via LSH for Patient 10234...",
+            "ALGO: LSH found Match 100018 (Sim: 0.88) - Historical Stage 3",
+            "RESULT: Multi-Patient Risk Update -> PT-10234: 72%, PT-10882: 24%",
+            "SNOWFLAKE: Pushing prediction vector to MART.AKI_PREDICTIONS",
+            "TRUST: K-Anonymity Check: Group size n=12 (k=5) -> SAFE",
+            "ALGO: Federated Learning update - Local weights encrypted"
+        ];
+
+        function toggleStreaming() {
+            isStreaming = !isStreaming;
+            const btn = document.getElementById('stream-btn');
+            const btnText = document.getElementById('btn-text');
+            const status = document.getElementById('streaming-status');
+            const log = document.getElementById('log-container');
+
+            if (isStreaming) {
+                btn.classList.remove('bg-cyan-500', 'pulse');
+                btn.classList.add('bg-red-500');
+                btnText.innerText = "STOP LIVE STREAMING";
+                status.innerHTML = '<i class="fas fa-circle text-green-500 animate-pulse mr-2"></i> LIVE: Streaming Events';
+                status.classList.remove('text-slate-500');
+                status.classList.add('text-green-400');
+                
+                log.innerHTML = "";
+                streamInterval = setInterval(() => {
+                    // Update Stats
+                    eventCount++;
+                    const risk = Math.floor(Math.random() * 60) + 30;
+                    
+                    if (Math.random() > 0.3) {
+                        const newCount = parseInt(document.getElementById('stat-new').innerText) + 1;
+                        document.getElementById('stat-new').innerText = newCount;
+                        
+                        // Detailed Trace Card
+                        const time = new Date().toLocaleTimeString();
+                        const p = document.createElement('div');
+                        p.className = "bg-slate-800/50 p-2 rounded border border-slate-700 space-y-1";
+                        p.innerHTML = `
+                            <div class="flex justify-between font-bold text-cyan-400">
+                                <span>TRC-EV-${eventCount} [${time}]</span>
+                                <span class="text-green-500">KAFKA -> MODEL</span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2 text-[9px] uppercase">
+                                <div class="bg-slate-900 p-1">1. Topic: <span class="text-slate-300">LABS</span></div>
+                                <div class="bg-slate-900 p-1">2. Bloom: <span class="text-green-400">NEW</span></div>
+                                <div class="bg-slate-900 p-1">3. KDIGO: <span class="text-yellow-400">STG 1</span></div>
+                                <div class="bg-slate-900 p-1">4. Prob: <span class="text-red-400">${risk}%</span></div>
+                            </div>
+                            <div class="text-[9px] text-slate-500 italic">XAI: Feature Importance -> Creatinine Ratio (0.42), Urine (0.28)</div>
+                        `;
+                        log.prepend(p);
+                    } else {
+                        const dropCount = parseInt(document.getElementById('stat-dropped').innerText) + 1;
+                        document.getElementById('stat-dropped').innerText = dropCount;
+                        const p = document.createElement('div');
+                        p.className = "text-red-400/50 italic py-1";
+                        p.innerText = `BLOOM: Duplicate event detected for Patient 10882 - Row Dropped`;
+                        log.prepend(p);
+                    }
+                    
+                    // Update main UI risk displays
+                    document.getElementById('risk-score').innerText = risk + "%";
+                    document.getElementById('risk-bar').style.width = risk + "%";
+                    document.getElementById('stat-throughput').innerText = (Math.random() * 5 + 2).toFixed(1);
+                    
+                    const label = document.getElementById('risk-label');
+                    if (risk > 70) {
+                        label.innerText = "HIGH RISK";
+                        label.className = "px-3 py-1 bg-red-950 text-red-400 rounded-full text-xs font-bold border border-red-500/50";
+                        document.getElementById('risk-score').className = "text-5xl font-bold text-red-500";
+                    } else if (risk > 40) {
+                        label.innerText = "MODERATE";
+                        label.className = "px-3 py-1 bg-yellow-950 text-yellow-400 rounded-full text-xs font-bold border border-yellow-500/50";
+                        document.getElementById('risk-score').className = "text-5xl font-bold text-yellow-500";
+                    } else {
+                        label.innerText = "STABLE";
+                        label.className = "px-3 py-1 bg-green-950 text-green-400 rounded-full text-xs font-bold border border-green-500/50";
+                        document.getElementById('risk-score').className = "text-5xl font-bold text-green-500";
+                    }
+                    
+                }, 1000);
+            } else {
+                btn.classList.add('bg-cyan-500', 'pulse');
+                btn.classList.remove('bg-red-500');
+                btnText.innerText = "START LIVE STREAMING";
+                status.innerHTML = '<i class="fas fa-circle mr-2"></i> Disconnected';
+                status.classList.add('text-slate-500');
+                status.classList.remove('text-green-400');
+                clearInterval(streamInterval);
+            }
+        }
+    </script>
+</body>
+</html>

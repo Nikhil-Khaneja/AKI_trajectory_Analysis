@@ -1,0 +1,15 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: "{{ env_var('SNOWFLAKE_DATABASE', 'AKI_DB') }}"
+    schema: BRONZE
+    tables:
+      - name: labevents_raw
+        identifier: LABEVENTS_RAW
+      - name: outputevents_raw
+        identifier: OUTPUTEVENTS_RAW
+      - name: icustays_raw
+        identifier: ICUSTAYS_RAW
+      - name: d_items
+        identifier: D_ITEMS

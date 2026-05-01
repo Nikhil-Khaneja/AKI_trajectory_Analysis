@@ -1,0 +1,43 @@
+project:
+  name: aki-trajectory
+  timezone: UTC
+
+paths:
+  hospital_data_dir: DATA/Hospital Data
+  icu_data_dir: DATA/ICU DATA
+  reports_dir: docs/reports
+  ge_results_dir: ge/results
+
+input_files:
+  patients: patients.csv
+  admissions: admissions-2.csv
+  labevents: labevents.csv
+  d_labitems: d_labitems.csv
+  icustays: icustays.csv
+  outputevents: outputevents.csv
+  d_items: d_items.csv
+
+kdigo:
+  # Curated from current data profiling; can be revised later.
+  serum_creatinine_itemids:
+    - "50912"
+    - "51081"
+    - "52024"
+    - "52546"
+  serum_creatinine_allowed_units:
+    - "mg/dL"
+  urine_output_itemids:
+    - "226559" # Foley
+    - "226560" # Void
+    - "226561" # Condom Cath
+    - "226567" # Straight Cath
+    - "226627" # OR Urine
+    - "226631" # PACU Urine
+    - "227489" # GU Irrigant/Urine Volume Out
+
+quality_thresholds:
+  creatinine_min_mg_dl: 0.1
+  creatinine_max_mg_dl: 20.0
+  urine_min_ml: 0.0
+  urine_max_ml_per_event: 10000.0
+  max_missing_key_ratio: 0.01
