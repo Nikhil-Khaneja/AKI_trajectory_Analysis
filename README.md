@@ -29,6 +29,12 @@ validation/
 ├── ge_checkpoint_1.py          # GX Gate #1 (raw → Bronze)
 ├── ge_checkpoint_2.py          # GX Gate #2 (Silver output)
 └── silver_bloom_filter.py      # Bloom Filter — 7-day Silver dedup
+models/
+├── train_lr.py                 # Logistic Regression + MLflow
+└── train_gbt.py                # Gradient Boosting + MLflow
+evaluation/
+├── evaluate_model.py           # AUROC/AUPRC/F1/Brier + metrics export
+└── fairness_metrics.py         # Subgroup fairness analysis
 dbt/
 ├── dbt_project.yml
 ├── profiles.yml.example
@@ -46,7 +52,8 @@ dbt/
 tests/
 ├── conftest.py
 ├── test_ge_checkpoint_1.py
-└── test_bloom_filter.py
+├── test_bloom_filter.py
+└── test_evaluate.py
 requirements.txt
 .env.example
 ```
